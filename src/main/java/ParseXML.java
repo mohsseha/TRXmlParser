@@ -1,5 +1,6 @@
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
@@ -35,6 +36,7 @@ public class ParseXML {
 
 
     public static void main(String... args) throws Exception {
+
         checkArgument(args.length >= 1, "what's the input file?");
 
         final File inputFile = new File(args[0]);
@@ -79,6 +81,10 @@ public class ParseXML {
         csvDump(countryOfUid);
 
     }
+
+
+
+
 
     private static void csvDump(final ConcurrentMap<String, Set<String>> emailAddressOfUid) {
         emailAddressOfUid.forEach((s, strings) -> {

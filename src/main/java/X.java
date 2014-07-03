@@ -42,8 +42,8 @@ public class X {
     }
 
     private void incrementAX(final String name, final String country) {
-        int current = getNameCountry(name, country);
-        nameSubjectTable.put(name, subject, current + 1);
+//        int current = getNameCountry(name, country);
+//        nameSubjectTable.put(name, subject, current + 1);
     }
 
     synchronized private void incrementXby(final String name, final String subject, final double inc) {
