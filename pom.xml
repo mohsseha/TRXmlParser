@@ -34,7 +34,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>ParseXML</mainClass>
+                            <mainClass>edu.mit.husain.ParseXML</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
@@ -62,7 +62,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>ParseXML</mainClass>
+                            <mainClass>edu.mit.husain.ParseXML</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
