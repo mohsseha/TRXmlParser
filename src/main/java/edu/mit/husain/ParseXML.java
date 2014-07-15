@@ -56,64 +56,62 @@ public class ParseXML {
 //            .makeMap();
 
 
-
     public static void main(String... filenames) throws Exception {
 
         checkArgument(filenames.length >= 1, "what's the input file?");
         progressMonitor.start();
 
-        List<X> xes = Lists.newArrayList(filenames).parallelStream().map(ParseXML::toXMatrix).collect(Collectors.toList());
+        List<X> xes = Lists.newArrayList(filenames).stream().map(ParseXML::toXMatrix).collect(Collectors.toList());
 
         err.print("done parsing all files... summing");
         final X finalX = new X(1900);
         xes.forEach((x) -> finalX.add(x));
+        finalX.authorSubjectOfYear.remove(1900);
+        checkArgument(finalX.authorSubjectOfYear.keySet().size() == 1, " we are only doing 1 year at a time now!!!!");
 
-
-        List<String> sortedSubjects = Lists.newArrayList();
-        sortedSubjects.addAll(allSubjects);
-        sortedSubjects.sort((c1, c2) -> c1.compareToIgnoreCase(c2));
-        sqlOut(sortedSubjects);
-        out.println("delete from x;");
+        sqlOut(allSubjects);
         for (int year : finalX.authorSubjectOfYear.keySet()) {
-            sqlOut(sortedSubjects, year, finalX.authorSubjectOfYear.get(year));
+            sqlOut(year, finalX.authorSubjectOfYear.get(year));
         }
         sqlOutAuthorCountryTable(finalX);
-        err.println("done! here are all the countries we saw:");
-        err.println(Joiner.on("\n").join(allCountries));
         progressMonitor.stop();
     }
 
     private static void sqlOutAuthorCountryTable(final X x) {
-        final X.PairHistogram authorCountry =x.authorCountry;
-        out.println("delete from author_country;");
-        for(final String authorName:authorCountry.primaryKeySet()){
-            String sql="INSERT INTO author_country\n"+
-                    "(author,country)\n"+
-                    "VALUES('"+authorName.replace("'","")+"', '"+authorCountry.maxOtherKeyFor(authorName).replace("'","")+"');";
+        int year = x.authorSubjectOfYear.keySet().iterator().next();
+        final X.PairHistogram authorCountry = x.authorCountry;
+        for (final String authorName : authorCountry.primaryKeySet()) {
+            String sql = "INSERT INTO author_country_year\n" +
+                    "(author,country,year)\n" +
+                    "VALUES('" + authorName.replace("'", "") + "', '" + authorCountry.maxOtherKeyFor(authorName).replace("'", "") + "'," + year + ");";
             out.println(sql);
 
         }
     }
 
 
-    private static void sqlOut(final List<String> sortedSubjects, final int year, X.PairHistogram authorSubject) {
+    private static void sqlOut(final int year, X.PairHistogram authorSubject) {
         for (Pair<String, String> key : authorSubject.keySetAsPair()) {
-            StringBuffer sql = new StringBuffer("INSERT INTO x\n");
-            final String authorName =key.getKey();
+            final String authorName = key.getKey();
             final String subject = key.getValue();
-            final int sPos = sortedSubjects.indexOf(subject);
-            sql.append("(author, year, s" + sPos + ")\n");
-            sql.append("VALUES ('" + authorName.replace("'","") + "', " + year + ", " + authorSubject.valueOf(authorName,subject) + ");");
-            out.println(sql);
+            final double valueTotal=authorSubject.valueOf(authorName,subject);
+            final int subjectHash = subject.hashCode();
+            out.println("INSERT INTO x\n"
+                    + "(author, year, subject_hash, value_total)\n"
+                    + "VALUES ('" + authorName.replace("'", "") + "', " + year + ", " + subjectHash + ","+valueTotal+");");
         }
 
     }
 
-    private static void sqlOut(final List<String> sortedSubjects) {
-        out.println("delete from subject_s;");
-        for (int i = 0; i < sortedSubjects.size(); i++) {
-            out.println("INSERT INTO subject_s (subject, s) VALUES ('" + sortedSubjects.get(i).replace("'","") + "'," + i + ");");
-        }
+
+
+    private static void sqlOut(final Set<String> subjects) {
+        subjects.forEach((s) -> {
+                    out.println("INSERT INTO subject_hash (subject, hash) VALUES ('" + s.replace("'", "")
+                            + "'," + s.hashCode() + ");");
+                }
+        );
+
     }
 
 
@@ -121,8 +119,8 @@ public class ParseXML {
         final File inputFile = new File(checkNotNull(filename));
         int year = Integer.parseInt(filename.substring(3, 7));
         final X x = new X(year);
-        final X result= getXFromBufferedReader(bufferedReaderOfFile(inputFile), x, year);
-        err.println("\t done processing file="+filename);
+        final X result = getXFromBufferedReader(bufferedReaderOfFile(inputFile), x, year);
+        err.println("\t done processing file=" + filename);
         return result;
     }
 
@@ -133,6 +131,8 @@ public class ParseXML {
             bufferedReader = Files.newReader(checkNotNull(file), Charset.defaultCharset());
         } catch (FileNotFoundException e) {
             e.printStackTrace();
+            err.print("IO ERROR!!!! ");
+            System.exit(1);
         }
         return checkNotNull(bufferedReader);
     }
@@ -140,11 +140,11 @@ public class ParseXML {
     private static X getXFromBufferedReader(BufferedReader tmpFileReader, final X Xbatch, final int year) {
         try {
 
-        final DocumentBuilder db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-        final XPath xpath = XPathFactory.newInstance().newXPath();
+            final DocumentBuilder db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+            final XPath xpath = XPathFactory.newInstance().newXPath();
 
-        StringBuffer recordTxt = new StringBuffer(44000);// average size of document is about 22k
-        String line;
+            StringBuffer recordTxt = new StringBuffer(44000);// average size of document is about 22k
+            String line;
             while ((line = tmpFileReader.readLine()) != null) {
                 if (line.contains(REC_START)) {
                     recordTxt.setLength(0);
@@ -152,7 +152,7 @@ public class ParseXML {
                 recordTxt.append(line);
                 recordTxt.append('\n');
                 if (line.contains(REC_END)) {//done with this record
-                    processXmlRecord(Xbatch, recordTxt.toString(), year,db,xpath);
+                    processXmlRecord(Xbatch, recordTxt.toString(), year, db, xpath);
                     recordTxt.setLength(0);
                 }
             }
@@ -170,12 +170,13 @@ public class ParseXML {
 
     /**
      * key processing Method
-     *  @param x         where we add our results
+     *
+     * @param x         where we add our results
      * @param xmlRecord string of the xml representing the TR data of a publication
      * @param db
      * @param xpath
      */
-    private static void processXmlRecord(final X x, final String xmlRecord, int year,final DocumentBuilder db,final XPath xpath) throws Exception {
+    private static void processXmlRecord(final X x, final String xmlRecord, int year, final DocumentBuilder db, final XPath xpath) throws Exception {
 ////       bunch of sanity checks:
 //        checkArgument(xmlRecord.contains(REC_START) && xmlRecord.contains(REC_END), "valid xml file???!!!\n\n" + xmlRecord);
 //        checkArgument(xmlRecord.contains("<UID>"), "valid xml file???!!!\n\n" + xmlRecord);
@@ -222,7 +223,7 @@ public class ParseXML {
             while (true) {
                 err.print("\tAvailable memory: " + Runtime.getRuntime().totalMemory() / (1024 * 1024 * 1024) + " GB");
                 err.println("\tprogress...\t " + allUids.size() / 1_000_000. + "Million Documents processed:");
-                err.println(allCountries.size() + "countries\t" + allSubjects.size() + "subjects, and\t" +allAuthorNames.size()/1_000_000. + " Million authors");
+                err.println(allCountries.size() + "countries\t" + allSubjects.size() + "subjects, and\t" + allAuthorNames.size() / 1_000_000. + " Million authors");
                 try {
                     Thread.sleep(1000 * 3 * 60);
                 } catch (InterruptedException e) {

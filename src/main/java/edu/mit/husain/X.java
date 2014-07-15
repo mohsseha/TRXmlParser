@@ -24,7 +24,7 @@ public class X {
     Map<Integer, PairHistogram> authorSubjectOfYear = Maps.newConcurrentMap();
     final PairHistogram authorCountry = new PairHistogram();
 
-    private X() {
+    public X() {
     }
 
     public X(final int year) {
@@ -86,7 +86,7 @@ public class X {
         public double valueOf(final String s1, final String s2) {
             if (histogram.get(s1) == null) {
                 histogram.put(s1, new MapMaker()
-                                .initialCapacity(100)
+                                .initialCapacity(4)
                                 .makeMap()
                 );
             }
@@ -127,7 +127,7 @@ public class X {
             final ConcurrentMap<String, Double> innerMap = histogram.get(primaryKey);
             final Set<String> secondaryKeys = innerMap.keySet();
             if (innerMap == null || secondaryKeys.size() == 0) {
-                return "UNKNOWN";
+                return "ZZZ_UNKNOWN";
             }
             String result = secondaryKeys.iterator().next();
             for (String candidate : secondaryKeys) {
