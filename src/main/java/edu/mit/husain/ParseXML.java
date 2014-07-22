@@ -1,6 +1,5 @@
 package edu.mit.husain;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -16,9 +15,13 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.StringReader;
 import java.nio.charset.Charset;
-import java.util.*;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -65,7 +68,7 @@ public class ParseXML {
 
         err.print("done parsing all files... summing");
         final X finalX = new X(1900);
-        xes.forEach((x) -> finalX.add(x));
+        xes.forEach(finalX::add);
         finalX.authorSubjectOfYear.remove(1900);
         checkArgument(finalX.authorSubjectOfYear.keySet().size() == 1, " we are only doing 1 year at a time now!!!!");
 
@@ -94,22 +97,19 @@ public class ParseXML {
         for (Pair<String, String> key : authorSubject.keySetAsPair()) {
             final String authorName = key.getKey();
             final String subject = key.getValue();
-            final double valueTotal=authorSubject.valueOf(authorName,subject);
+            final double valueTotal = authorSubject.valueOf(authorName, subject);
             final int subjectHash = subject.hashCode();
             out.println("INSERT INTO x\n"
                     + "(author, year, subject_hash, value_total)\n"
-                    + "VALUES ('" + authorName.replace("'", "") + "', " + year + ", " + subjectHash + ","+valueTotal+");");
+                    + "VALUES ('" + authorName.replace("'", "") + "', " + year + ", " + subjectHash + "," + valueTotal + ");");
         }
 
     }
 
 
-
     private static void sqlOut(final Set<String> subjects) {
-        subjects.forEach((s) -> {
-                    out.println("INSERT INTO subject_hash (subject, hash) VALUES ('" + s.replace("'", "")
-                            + "'," + s.hashCode() + ");");
-                }
+        subjects.forEach((s) -> out.println("INSERT INTO subject_hash (subject, hash) VALUES ('" + s.replace("'", "")
+                        + "'," + s.hashCode() + ");")
         );
 
     }
@@ -125,7 +125,7 @@ public class ParseXML {
     }
 
 
-    private static BufferedReader bufferedReaderOfFile(final File file) {
+    public static BufferedReader bufferedReaderOfFile(final File file) {
         BufferedReader bufferedReader = null;
         try {
             bufferedReader = Files.newReader(checkNotNull(file), Charset.defaultCharset());
@@ -143,7 +143,7 @@ public class ParseXML {
             final DocumentBuilder db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
             final XPath xpath = XPathFactory.newInstance().newXPath();
 
-            StringBuffer recordTxt = new StringBuffer(44000);// average size of document is about 22k
+            final StringBuilder recordTxt = new StringBuilder(44000);// average size of document is about 22k
             String line;
             while ((line = tmpFileReader.readLine()) != null) {
                 if (line.contains(REC_START)) {
@@ -208,7 +208,7 @@ public class ParseXML {
         x.appendToMatrix(subjects, countries, names, year);
     }
 
-    final private static List<String> listOfStringsFromXPath(final XPath xpath, final String xpathPattern, final Document document) throws XPathExpressionException {
+    private static List<String> listOfStringsFromXPath(final XPath xpath, final String xpathPattern, final Document document) throws XPathExpressionException {
         final NodeList result = (NodeList) xpath.evaluate(xpathPattern, document, XPathConstants.NODESET);
         final List<String> propertySet = Lists.newArrayList();
         for (int i = 0; i < result.getLength(); i++) {
@@ -217,7 +217,7 @@ public class ParseXML {
         return propertySet;
     }
 
-    static Thread progressMonitor = new Thread() {
+    static private Thread progressMonitor = new Thread() {
         @Override
         public void run() {
             while (true) {

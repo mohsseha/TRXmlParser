@@ -10,16 +10,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
-import java.util.logging.Logger;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Created by husain on 6/12/14.
  */
 public class X {
-    Logger log = Logger.getAnonymousLogger();
 
     Map<Integer, PairHistogram> authorSubjectOfYear = Maps.newConcurrentMap();
     final PairHistogram authorCountry = new PairHistogram();
@@ -32,7 +27,7 @@ public class X {
     }
 
 
-    public void appendToMatrix(final List<String> subjects,final List<String> countries,final List<String> authors, final int year) {
+    public void appendToMatrix(final List<String> subjects, final List<String> countries, final List<String> authors, final int year) {
         double inc = 1.0 / ((double) authors.size() * subjects.size());
         for (String authorName : authors) {
             for (String subject : subjects) {
