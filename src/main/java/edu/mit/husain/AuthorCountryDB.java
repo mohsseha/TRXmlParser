@@ -5,11 +5,13 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
+import com.google.common.io.LineProcessor;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.Math.abs;
 import static java.lang.System.err;
@@ -18,21 +20,37 @@ import static java.lang.System.err;
  * Created by husain on 7/21/14.
  */
 public class AuthorCountryDB {
-    final String AUTHOR_COUNTRY_DB = "/tmp/author_country_year.PipeDelimitedFile";
+    final static String AUTHOR_COUNTRY_DB = "/tmp/author_country_year.PipeDelimitedFile";
 
-    public static final AuthorCountryDB singleton = new AuthorCountryDB();
-    private final HashBasedTable<String, Integer, Country> db = HashBasedTable.create(36054863, 10);
+    private HashBasedTable<String, Integer, Country> db;
 
-    private AuthorCountryDB() {
+    public AuthorCountryDB() {
         err.print("loading " + AUTHOR_COUNTRY_DB + "...");
         final Splitter splitter = Splitter.on('|');
         try {
-            List<String> rows = Files.readLines(new File(AUTHOR_COUNTRY_DB), Charset.defaultCharset());
-            for (String row : rows) {
-                final List<String> parts = splitter.splitToList(row);
-                //        tordo, p|france|1980
-                db.put(parts.get(0), Integer.parseInt(parts.get(2)), Country.from(parts.get(1)));
-            }
+            db = Files.readLines(new File(AUTHOR_COUNTRY_DB), Charset.defaultCharset(), new LineProcessor<HashBasedTable<String, Integer, Country>>() {
+                final HashBasedTable<String, Integer, Country> result = HashBasedTable.create(8_000_000, 1);
+                final AtomicInteger integer = new AtomicInteger();
+
+                @Override
+                public boolean processLine(String line) throws IOException {
+                    final List<String> parts = splitter.splitToList(line);
+                    //        tordo, p|france|1980
+                    integer.incrementAndGet();
+                    synchronized (result) {
+                        result.put(parts.get(0), Integer.parseInt(parts.get(2)), Country.from(parts.get(1)));
+                    }
+                    if (integer.get() % 10_000_000 == 0)
+                        err.println("\tlines processed==" + integer.get() + "countries=" + Country.size());
+                    return true;
+                }
+
+                @Override
+                public HashBasedTable<String, Integer, Country> getResult() {
+                    return result;
+                }
+            });
+
         } catch (IOException e) {
             err.println("\nhad problem reading file " + AUTHOR_COUNTRY_DB);
             e.printStackTrace();

@@ -30,6 +30,7 @@ import static java.lang.System.err;
 public class SecondPhase {
 
     static volatile long recordsProcessed = 0;
+    static AuthorCountryDB authorCountryDB;
 
     /**
      * read in one year at a time. year.xml and automatically write out year.sql for results.
@@ -40,7 +41,9 @@ public class SecondPhase {
     public static void main(String... argv) throws Exception {
         Preconditions.checkArgument(argv.length == 2);
         progressMonitor.start();
+        authorCountryDB=new AuthorCountryDB();
 
+        err.println("TODO:DELME: XXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXX\n");
         IntStream.range(Integer.parseInt(argv[0]), Integer.parseInt(argv[1])).parallel()
                 .mapToObj(SecondPhase::readYear)
                 .forEach(SecondPhase::writeYearStats);
@@ -112,17 +115,16 @@ public class SecondPhase {
         final List<Subject> subjects = Subject.from(listOfStringsFromXPath(xpath, "//subject[@ascatype='traditional']", document));
         final List<Country> countries = Country.from(listOfStringsFromXPath(xpath, "//addresses//country", document));
         if (countries.size() == 0) {
-
             countries.addAll(findCountriesViaAuthors(xpath, document, stats.getYear()));
         }
         stats.incSubjectsAndCountryStats(subjects, countries);
     }
 
-    private static List<Country> findCountriesViaAuthors(XPath xpath, Document document, int year) throws XPathExpressionException {
+    private static List<Country> findCountriesViaAuthors(final XPath xpath,final Document document, int year) throws XPathExpressionException {
         final List<String> authorNames = listOfStringsFromXPath(xpath, "//wos_standard", document);
         List<Country> result;
         for (String author : authorNames) {
-            Optional<Country> countryOptional = AuthorCountryDB.singleton.get(author, year);
+            Optional<Country> countryOptional = authorCountryDB.get(author, year);
             if (countryOptional.isPresent()) {
                 result = Lists.newArrayListWithExpectedSize(1);
                 result.add(countryOptional.get());

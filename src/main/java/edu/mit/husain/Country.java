@@ -1,5 +1,6 @@
 package edu.mit.husain;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -27,7 +28,7 @@ final public class Country {
     }
 
     public static List<Country> from(final List<String> strings) {
-        return Lists.transform(strings, (s) -> (from(s)));
+        return Lists.newArrayList(Iterables.transform(strings, (s) -> (from(s)))); //no, Lists.transform does not work!
     }
 
     @Override
@@ -44,5 +45,9 @@ final public class Country {
     @Override
     public int hashCode() {
         return countryName.hashCode();
+    }
+
+    public static int size() {
+        return allCountries.size();
     }
 }
