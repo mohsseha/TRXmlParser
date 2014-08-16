@@ -41,11 +41,10 @@ public class SecondPhase {
     public static void main(String... argv) throws Exception {
         Preconditions.checkArgument(argv.length == 2);
         progressMonitor.start();
-        authorCountryDB=new AuthorCountryDB();
+        authorCountryDB = new AuthorCountryDB();
 
-        err.println("TODO:DELME: XXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXX\nXXXXXXXXXXXXXXXXXXXX\n");
-        IntStream.range(Integer.parseInt(argv[0]), Integer.parseInt(argv[1])).parallel()
-                .mapToObj(SecondPhase::readYear)
+        IntStream.range(Integer.parseInt(argv[0]), Integer.parseInt(argv[1])).parallel() //eg. 1980..2012
+                .mapToObj(SecondPhase::readYearXml)
                 .forEach(SecondPhase::writeYearStats);
 
         progressMonitor.stop();
@@ -69,7 +68,7 @@ public class SecondPhase {
         }
     }
 
-    private static YearlyStatistics readYear(int inputYear) {
+    private static YearlyStatistics readYearXml(int inputYear) {
         YearlyStatistics stats = new YearlyStatistics(inputYear);
         final String fileName = Integer.toString(inputYear) + ".xml";
         BufferedReader inputBuffer = ParseXML.bufferedReaderOfFile(new File(fileName));
@@ -105,7 +104,7 @@ public class SecondPhase {
     }
 
 
-     private static void addXmlRecordToStats(final YearlyStatistics stats, final String xmlRecord, final DocumentBuilder db, final XPath xpath) throws Exception {
+    private static void addXmlRecordToStats(final YearlyStatistics stats, final String xmlRecord, final DocumentBuilder db, final XPath xpath) throws Exception {
         db.reset();
         xpath.reset();
 
@@ -120,7 +119,7 @@ public class SecondPhase {
         stats.incSubjectsAndCountryStats(subjects, countries);
     }
 
-    private static List<Country> findCountriesViaAuthors(final XPath xpath,final Document document, int year) throws XPathExpressionException {
+    private static List<Country> findCountriesViaAuthors(final XPath xpath, final Document document, int year) throws XPathExpressionException {
         final List<String> authorNames = listOfStringsFromXPath(xpath, "//wos_standard", document);
         List<Country> result;
         for (String author : authorNames) {
@@ -134,7 +133,7 @@ public class SecondPhase {
         return Collections.emptyList();
     }
 
-     private static List<String> listOfStringsFromXPath(final XPath xpath, final String xpathPattern, final Document document) throws XPathExpressionException {
+    private static List<String> listOfStringsFromXPath(final XPath xpath, final String xpathPattern, final Document document) throws XPathExpressionException {
         final NodeList result = (NodeList) xpath.evaluate(xpathPattern, document, XPathConstants.NODESET);
         final List<String> propertyList = Lists.newArrayListWithCapacity(result.getLength());
         for (int i = 0; i < result.getLength(); i++) {

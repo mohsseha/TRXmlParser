@@ -57,3 +57,13 @@ the SecondPhase processor uses the following SQL schema:
     subject_hash int,
     x decimal
     );
+
+SecondPhase
+===========
+the SecondPhase reads in files named year.xml 
+
+
+SubSubject
+==========
+the SubSubject processor is specifically used to find correlations between subSubjects by processing their UIDs. The 
+input is a csv file given as an argument and the output is a MMA input steam sent to standard out.

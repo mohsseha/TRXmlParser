@@ -33,7 +33,7 @@ public class AuthorCountryDB {
                 final AtomicInteger integer = new AtomicInteger();
 
                 @Override
-                public boolean processLine(String line) throws IOException {
+                public boolean processLine(final String line) throws IOException {
                     final List<String> parts = splitter.splitToList(line);
                     //        tordo, p|france|1980
                     integer.incrementAndGet();
@@ -55,7 +55,7 @@ public class AuthorCountryDB {
             err.println("\nhad problem reading file " + AUTHOR_COUNTRY_DB);
             e.printStackTrace();
         }
-        err.println("finished loading.");
+        err.println("finished loading author country relation table");
     }
 
     final Optional<Country> get(final String author, final int year) {
