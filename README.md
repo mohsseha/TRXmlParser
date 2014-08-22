@@ -60,8 +60,12 @@ the SecondPhase processor uses the following SQL schema:
 
 SecondPhase
 ===========
-the SecondPhase reads in files named year.xml 
+the SecondPhase reads in files named year.xml it also needs an author_country DB saved in 
+*/tmp/author_country_year.PipeDelimitedFile* in the format:
+    
+    tordo, p|france|1980
 
+after running the first phase and generating the author_country_year table.  
 
 SubSubject
 ==========

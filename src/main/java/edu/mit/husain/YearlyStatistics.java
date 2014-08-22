@@ -15,7 +15,7 @@ public class YearlyStatistics {
         return year;
     }
 
-    private HashBasedTable<Country, Subject, Double> xCountrySubject = HashBasedTable.create(400, 251);
+    private HashBasedTable<Country, Subject, Double> xCountrySubject = HashBasedTable.create(400, 251+384); //subjects + sub-subjects
 
     int year;
 

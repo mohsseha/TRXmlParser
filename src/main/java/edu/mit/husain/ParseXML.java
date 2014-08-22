@@ -20,6 +20,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.StringReader;
 import java.nio.charset.Charset;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -59,12 +61,13 @@ public class ParseXML {
 //            .makeMap();
 
 
-    public static void main(String... filenames) throws Exception {
+    public static void main(String... fileNames) throws Exception {
 
-        checkArgument(filenames.length >= 1, "what's the input file?");
+        checkArgument(fileNames.length >= 1, "what are the input file names?");
+
         progressMonitor.start();
 
-        List<X> xes = Lists.newArrayList(filenames).stream().map(ParseXML::toXMatrix).collect(Collectors.toList());
+        List<X> xes = Lists.newArrayList(fileNames).stream().map(ParseXML::toXMatrix).collect(Collectors.toList());
 
         err.print("done parsing all files... summing");
         final X finalX = new X(1900);
@@ -107,7 +110,7 @@ public class ParseXML {
     }
 
 
-    private static void sqlOut(final Set<String> subjects) {
+    public static void sqlOut(final Set<String> subjects) {
         subjects.forEach((s) -> out.println("INSERT INTO subject_hash (subject, hash) VALUES ('" + s.replace("'", "")
                         + "'," + s.hashCode() + ");")
         );

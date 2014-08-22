@@ -3,6 +3,7 @@ package edu.mit.husain;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import org.w3c.dom.Document;
@@ -17,37 +18,61 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import java.io.*;
 import java.nio.charset.Charset;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.System.err;
 
 /**
  * 2nd phase analysis based off of results of running ParseXML
- * Created by husain on 7/20/14.
+ * Created by husain@mit.edu on 7/20/14.
  */
 public class SecondPhase {
 
     static volatile long recordsProcessed = 0;
     static AuthorCountryDB authorCountryDB;
+    public static final String SUB_SUBJECT_FILE = "/tmp/subSubjectUids.csv";
 
     /**
      * read in one year at a time. year.xml and automatically write out year.sql for results.
      *
-     * @param argv start and stop years
+     * @param yearBounds start and stop years
      * @throws Exception
      */
-    public static void main(String... argv) throws Exception {
-        Preconditions.checkArgument(argv.length == 2);
+    public static void main(String... yearBounds) throws Exception {
+        Preconditions.checkArgument(yearBounds.length == 2);
+
+        err.println("loading sub-subject map from " + SUB_SUBJECT_FILE);
+        SubSubject.main(new String[]{SUB_SUBJECT_FILE});
+
         progressMonitor.start();
         authorCountryDB = new AuthorCountryDB();
 
-        IntStream.range(Integer.parseInt(argv[0]), Integer.parseInt(argv[1])).parallel() //eg. 1980..2012
+        IntStream.rangeClosed(Integer.parseInt(yearBounds[0]), Integer.parseInt(yearBounds[1])).parallel() //eg. 1980..2013
                 .mapToObj(SecondPhase::readYearXml)
                 .forEach(SecondPhase::writeYearStats);
 
+        sqlOutAllSubjects();
+
         progressMonitor.stop();
+
+    }
+
+    private static void sqlOutAllSubjects() {
+        File output = new File("allSubjects.sql");
+        Subject.allSubjects.keySet().forEach((s) -> {
+            try {
+                Files.append(
+                        "INSERT INTO subject_hash (subject, hash) VALUES ('" + s.replace("'", "") + "'," + s.hashCode() + ");\n"
+                        , output, Charset.defaultCharset());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+
 
     }
 
@@ -76,7 +101,7 @@ public class SecondPhase {
     }
 
 
-    private static YearlyStatistics getYearlyStatisticsFromBufferedReader(BufferedReader inputBuffer, final YearlyStatistics stats) {
+    private static YearlyStatistics getYearlyStatisticsFromBufferedReader(final BufferedReader inputBuffer, final YearlyStatistics stats) {
         try {
 
             final DocumentBuilder db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
@@ -103,7 +128,12 @@ public class SecondPhase {
         return stats;
     }
 
-
+    /**
+     * MAIN RECORD PROCESSOR!
+     * this method calculates the countries first directly in the record and then via authors
+     *
+     * @see #findCountriesViaAuthors(javax.xml.xpath.XPath, org.w3c.dom.Document, int)
+     */
     private static void addXmlRecordToStats(final YearlyStatistics stats, final String xmlRecord, final DocumentBuilder db, final XPath xpath) throws Exception {
         db.reset();
         xpath.reset();
@@ -111,13 +141,27 @@ public class SecondPhase {
         final InputSource source = new InputSource(new StringReader(xmlRecord));
         final Document document = db.parse(source);
 
-        final List<Subject> subjects = Subject.from(listOfStringsFromXPath(xpath, "//subject[@ascatype='traditional']", document));
+        final String uid = xpath.evaluate("REC/UID", document);
+        final List<Subject> subjects = Subject.fromStringList(listOfStringsFromXPath(xpath, "//subject[@ascatype='traditional']", document));
+        subjects.addAll(subSubjectsOfUid(uid));
         final List<Country> countries = Country.from(listOfStringsFromXPath(xpath, "//addresses//country", document));
         if (countries.size() == 0) {
             countries.addAll(findCountriesViaAuthors(xpath, document, stats.getYear()));
         }
         stats.incSubjectsAndCountryStats(subjects, countries);
     }
+
+    private static Collection<Subject> subSubjectsOfUid(final String uid) {
+        checkNotNull(uid);
+        final String key = "WOS:" + uid;
+        if (!SubSubject.documentSubjectMap.containsKey(key)) {
+            return Collections.EMPTY_SET;
+        }
+
+        return Collections2.transform(SubSubject.documentSubjectMap.get(key),
+                (subjSubjectString) -> Subject.from(subjSubjectString));
+    }
+
 
     private static List<Country> findCountriesViaAuthors(final XPath xpath, final Document document, int year) throws XPathExpressionException {
         final List<String> authorNames = listOfStringsFromXPath(xpath, "//wos_standard", document);

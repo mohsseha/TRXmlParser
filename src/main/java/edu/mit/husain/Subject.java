@@ -1,9 +1,12 @@
 package edu.mit.husain;
 
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -28,7 +31,7 @@ final public class Subject {
         return subject;
     }
 
-    public static List<Subject> from(final List<String> strings) {
+    public static List<Subject> fromStringList(final List<String> strings) {
         return Lists.transform(strings, (s) -> (from(s)));
     }
 
