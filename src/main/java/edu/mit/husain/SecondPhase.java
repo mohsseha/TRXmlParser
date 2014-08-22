@@ -153,12 +153,12 @@ public class SecondPhase {
 
     private static Collection<Subject> subSubjectsOfUid(final String uid) {
         checkNotNull(uid);
-        final String key = "WOS:" + uid;
-        if (!SubSubject.documentSubjectMap.containsKey(key)) {
+        String key = uid.substring(4);//drop the WOS:
+        if (!SubSubject.documentSubjectMap.containsKey(uid)) {
             return Collections.EMPTY_SET;
         }
 
-        return Collections2.transform(SubSubject.documentSubjectMap.get(key),
+        return Collections2.transform(SubSubject.documentSubjectMap.get(uid),
                 (subjSubjectString) -> Subject.from(subjSubjectString));
     }
 
