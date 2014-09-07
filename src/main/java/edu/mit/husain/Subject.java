@@ -29,7 +29,7 @@ final public class Subject {
     }
 
     public static List<Subject> fromStringList(final List<String> strings) {
-        return Lists.transform(strings, (s) -> (from(s)));
+        return Lists.newArrayList(Lists.transform(strings, (s) -> (from(s))));
     }
 
     @Override
